@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title="HomeView">
+	
+	
+		<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		
+		.btn{right:20px;}
+		.results{font-size:12px;}
+		.usernameTxtBox{left:20px;}
+
+	</fx:Style>
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	
+	<fx:Script>
+		<![CDATA[
+						
+			//Create the AgeCheq object
+			var objAC:AgeCheq = new AgeCheq();
+			
+			//The AgeCheq Developer Key and AppID 
+			var developerKey:String = 'ENTER_YOUR_DEVELOPER_KEY_HERE';
+			var appID:String 		= 'ENTER_YOUR_APPID_HERE';  
+			
+			//global variable to hold the AgeCheq PIN
+			var acPIN:String 		= "";
+			
+			//Chose an identifier of your own to associate with this account, so that AgeCheq can give it back when a parent requests PII or deauthorizes 				
+			var associatedUserIdentifier:String = "Sample Identifier";
+					
+			public function check(AgeCheqPIN:String):void
+			{
+				acPIN = AgeCheqPIN;
+				
+				//make the appropriate AgeCheq call, returning to associate data with the user immediately after
+				objAC.check(developerKey, appID, AgeCheqPIN, associateData);
+			}			
+			
+			public function associateData(txtReturn:String):void
+			{
+				
+				//test the return from the check command
+				var objData:Object = JSON.parse(txtReturn); 
+				
+				//if we get a good result from the check, we can decide to add a unique identifier 
+				if (objData.rtn == "ok")
+				{
+					
+					//display the result in the result field
+					apiResult.text = processReturn(txtReturn);
+					
+					//make an associate call back to AgeCheq to add your own identifier for this user
+					objAC.associate(developerKey, appID, acPIN, associatedUserIdentifier, function(data:String) {});
+					
+				}
+				else
+				{
+					apiResult.text = txtReturn;
+					
+				}
+				
+			}
+						
+			//This is the callback handler - edit this to interpret the information coming back from AgeCheq
+			public function processReturn(txtReturn:String):String {
+				
+				var objData:Object = JSON.parse(txtReturn); 
+				var txtMoreInfo:String = "";
+				
+				
+				//CHECK TO SEE IF THE PARENT HAS BEEN APPROVED
+				if (objData.data.parentverified == 0) {
+					txtMoreInfo += "The Parent Dashboard account associated with this app has not been verified yet\r";
+				}
+				if (objData.data.parentverified == 1) {
+					txtMoreInfo += "The Parent Dashboard account associated with this app has been fully verified via payment or form\r";
+				}
+				if (objData.data.parentverified == 2) {
+					txtMoreInfo += "The Parent Dashboard account associated with this app has been partially verified by EmailPlus, SMS, or VOIP\r";
+				}
+				if (objData.data.parentverified == 3) {
+					txtMoreInfo += "The Parent Dashboard account associated with this app has been verified through an Online Payment Implementation\r";
+				}
+				
+				if (objData.data.appauthorized) {		
+					txtMoreInfo += "This app has been authorized.  You are free to collect PII on this user.\r";
+				}
+				else
+				{	
+					txtMoreInfo += "This app has NOT been authorized\r";
+				}
+				
+				if (objData.data.trials != null) {
+					txtMoreInfo += "There have been " + objData.data.trials + " trials\r";
+				}
+				
+				if (objData.data.under13) {
+					txtMoreInfo += "This device's user is under 13\r";
+				}								
+				if (objData.data.under18) {
+					txtMoreInfo += "This device's user is under 18\r";
+				}								
+				if (objData.data.underdevage) {
+					txtMoreInfo += "This app is under the age set in the developer dashboard\r";
+				}
+				
+				return txtMoreInfo;
+
+			}
+			
+		]]>
+	</fx:Script>
+	
+	
+	
+	<s:VGroup paddingTop='30' paddingLeft='30'  width="100%" height="100%" verticalAlign="top" horizontalAlign="center">
+		
+		<s:Group width="100%"  styleName="resultsGroup" height='30%'>
+			<s:Label paddingBottom='30' id="apiResult" styleName="results"  width="80%" text="Results"/>
+		</s:Group>
+		
+		<s:Group width="100%">
+			<s:TextInput styleName='usernameTxtBox' id='acpin' width='50%' text="AgeCheq PIN"  />
+			<s:Button label="Check" click="check(acpin.text)" styleName="btn" />
+
+		</s:Group>
+		
+
+		
+		
+		
+	</s:VGroup>
+</s:View>
